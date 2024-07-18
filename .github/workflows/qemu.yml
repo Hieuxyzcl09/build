@@ -1,0 +1,55 @@
+name: Build QEMU
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential ninja-build libglib2.0-dev libpixman-1-dev
+
+    - name: Clone QEMU
+      run: |
+        git clone https://github.com/qemu/qemu.git
+        cd qemu
+        git submodule update --init
+
+    - name: Build QEMU
+      run: |
+        cd qemu
+        ./configure --target-list=arm-softmmu
+        make -j$(nproc)
+
+    - name: Package QEMU
+      run: |
+        tar -czf qemu.tar.gz qemu
+
+    - name: Create Release and Upload Asset
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        if ! gh release list | grep -q "v1.0.0"; then
+          echo "Creating new release v1.0.0"
+          gh release create v1.0.0 --title "Release v1.0.0" --notes "Initial release" --generate-notes
+        else
+          echo "Release v1.0.0 already exists"
+        fi
+        
+        QEMU_VERSION=$(cd qemu && git rev-parse --short HEAD)
+        gh release upload v1.0.0 qemu.tar.gz --clobber
+        gh release edit v1.0.0 --notes "QEMU version: ${QEMU_VERSION}"

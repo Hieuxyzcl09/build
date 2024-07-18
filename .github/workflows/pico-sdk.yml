@@ -1,0 +1,57 @@
+name: Build Pico SDK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential
+
+    - name: Clone Pico SDK
+      run: |
+        git clone https://github.com/raspberrypi/pico-sdk.git
+        cd pico-sdk
+        git submodule update --init
+        echo "PICO_SDK_PATH=$PWD" >> $GITHUB_ENV
+
+    - name: Build Pico SDK
+      run: |
+        mkdir pico-sdk-build
+        cd pico-sdk-build
+        cmake ../pico-sdk
+        make -j$(nproc)
+
+    - name: Package Pico SDK
+      run: |
+        tar -czf pico-sdk.tar.gz pico-sdk pico-sdk-build
+
+    - name: Create Release and Upload Asset
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        if ! gh release list | grep -q "v1.0.0"; then
+          echo "Creating new release v1.0.0"
+          gh release create v1.0.0 --title "Release v1.0.0" --notes "Initial release" --generate-notes
+        else
+          echo "Release v1.0.0 already exists"
+        fi
+        
+        PICO_SDK_VERSION=$(cd pico-sdk && git rev-parse --short HEAD)
+        gh release upload v1.0.0 pico-sdk.tar.gz --clobber
+        gh release edit v1.0customise.0 --notes "Pico SDK version: ${PICO_SDK_VERSION}"

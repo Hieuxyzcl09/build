@@ -1,0 +1,57 @@
+name: Build MicroPython
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential libffi-dev git pkg-config
+
+    - name: Clone MicroPython
+      run: |
+        git clone https://github.com/micropython/micropython.git
+        cd micropython
+        git submodule update --init
+
+    - name: Build MicroPython
+      run: |
+        cd micropython
+        make -C mpy-cross
+        cd ports/unix
+        make submodules
+        make
+
+    - name: Package MicroPython
+      run: |
+        tar -czf micropython.tar.gz micropython
+
+    - name: Create Release and Upload Asset
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        if ! gh release list | grep -q "v1.0.0"; then
+          echo "Creating new release v1.0.0"
+          gh release create v1.0.0 --title "Release v1.0.0" --notes "Initial release" --generate-notes
+        else
+          echo "Release v1.0.0 already exists"
+        fi
+        
+        MICROPYTHON_VERSION=$(cd micropython && git rev-parse --short HEAD)
+        gh release upload v1.0.0 micropython.tar.gz --clobber
+        gh release edit v1.0.0 --notes "MicroPython version: ${MICROPYTHON_VERSION}"
