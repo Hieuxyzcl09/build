@@ -40,20 +40,20 @@ jobs:
       run: |
         tar -czf pico-sdk.tar.gz pico-sdk pico-sdk-build
 
-- name: Create/Update Release for Pico SDK
-  env:
-    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  run: |
-    PICO_SDK_VERSION=$(cd pico-sdk && git rev-parse --short HEAD)
-    RELEASE_NOTES="Pico SDK version: ${PICO_SDK_VERSION}"
+    - name: Create/Update Release for Pico SDK
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        PICO_SDK_VERSION=$(cd pico-sdk && git rev-parse --short HEAD)
+        RELEASE_NOTES="Pico SDK version: ${PICO_SDK_VERSION}"
     
-    if gh release view v1.0.0 &>/dev/null; then
-      echo "Updating existing release v1.0.0"
-      gh release edit v1.0.0 --notes "${RELEASE_NOTES}"
-    else
-      echo "Creating new release v1.0.0"
-      gh release create v1.0.0 --title "Release v1.0.0" --notes "${RELEASE_NOTES}"
-    fi
+        if gh release view v1.0.0 &>/dev/null; then
+          echo "Updating existing release v1.0.0"
+          gh release edit v1.0.0 --notes "${RELEASE_NOTES}"
+        else
+          echo "Creating new release v1.0.0"
+          gh release create v1.0.0 --title "Release v1.0.0" --notes "${RELEASE_NOTES}"
+        fi
     
-    echo "Uploading asset to release v1.0.0"
-    gh release upload v1.0.0 pico-sdk.tar.gz --clobber
+        echo "Uploading asset to release v1.0.0"
+        gh release upload v1.0.0 pico-sdk.tar.gz --clobber
