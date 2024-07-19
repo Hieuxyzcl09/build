@@ -17,7 +17,7 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        if ! gh release list | grep -q "v1.0.0"; then
+        if ! gh release view v1.0.0 &>/dev/null; then
           echo "Creating new release v1.0.0"
           gh release create v1.0.0 --title "Release v1.0.0" --notes "Combined release" --generate-notes
         else
@@ -27,9 +27,18 @@ jobs:
         # Download releases
         gh release download v1.0.0
 
-        # Create all.tar.gz
-        tar -czf all.tar.gz *.tar.gz
+        # Create all.zip
+        zip -r all.zip *.zip
 
-        # Upload Combined Asset and Update Description
-        gh release upload v1.0.0 all.tar.gz --clobber
+        # Split file if larger than 2GB
+        if [ $(stat -c%s "all.zip") -gt 2147483648 ]; then
+          split -b 2G all.zip all.zip.part_
+          for part in all.zip.part_*; do
+            gh release upload v1.0.0 "$part" --clobber
+          done
+        else
+          gh release upload v1.0.0 all.zip --clobber
+        fi
+
+        # Update Description
         gh release edit v1.0.0 --notes "Đây là bản release kết hợp của các bản build QEMU, Pico SDK và MicroPython"

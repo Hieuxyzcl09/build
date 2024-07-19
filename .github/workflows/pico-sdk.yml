@@ -22,38 +22,31 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential
 
-    - name: Clone Pico SDK
+    - name: Clone and Build Pico SDK
       run: |
         git clone https://github.com/raspberrypi/pico-sdk.git
         cd pico-sdk
         git submodule update --init
-        echo "PICO_SDK_PATH=$PWD" >> $GITHUB_ENV
-
-    - name: Build Pico SDK
-      run: |
-        mkdir pico-sdk-build
-        cd pico-sdk-build
-        cmake ../pico-sdk
+        mkdir build
+        cd build
+        cmake ..
         make -j$(nproc)
 
     - name: Package Pico SDK
       run: |
-        tar -czf pico-sdk.tar.gz pico-sdk pico-sdk-build
+        zip -r pico-sdk.zip pico-sdk
 
-    - name: Create/Update Release for Pico SDK
+    - name: Create Release and Upload Asset
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        PICO_SDK_VERSION=$(cd pico-sdk && git rev-parse --short HEAD)
-        RELEASE_NOTES="Pico SDK version: ${PICO_SDK_VERSION}"
-    
-        if gh release view v1.0.0 &>/dev/null; then
-          echo "Updating existing release v1.0.0"
-          gh release edit v1.0.0 --notes "${RELEASE_NOTES}"
-        else
+        if ! gh release view v1.0.0 &>/dev/null; then
           echo "Creating new release v1.0.0"
-          gh release create v1.0.0 --title "Release v1.0.0" --notes "${RELEASE_NOTES}"
+          gh release create v1.0.0 --title "Release v1.0.0" --notes "Initial release" --generate-notes
+        else
+          echo "Release v1.0.0 already exists"
         fi
-    
-        echo "Uploading asset to release v1.0.0"
-        gh release upload v1.0.0 pico-sdk.tar.gz --clobber
+        
+        PICO_SDK_VERSION=$(cd pico-sdk && git rev-parse --short HEAD)
+        gh release upload v1.0.0 pico-sdk.zip --clobber
+        gh release edit v1.0.0 --notes "Pico SDK version: ${PICO_SDK_VERSION}"

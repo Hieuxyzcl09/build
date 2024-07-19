@@ -38,7 +38,7 @@ jobs:
 
     - name: Package MicroPython
       run: |
-        tar -czf micropython.tar.gz micropython
+        zip -r micropython.zip micropython
 
     - name: Create Release and Upload Asset
       env:
@@ -52,5 +52,5 @@ jobs:
         fi
         
         MICROPYTHON_VERSION=$(cd micropython && git rev-parse --short HEAD)
-        gh release upload v1.0.0 micropython.tar.gz --clobber
+        gh release upload v1.0.0 micropython.zip --clobber
         gh release edit v1.0.0 --notes "MicroPython version: ${MICROPYTHON_VERSION}"

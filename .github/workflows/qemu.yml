@@ -36,7 +36,7 @@ jobs:
 
     - name: Package QEMU
       run: |
-        tar -czf qemu.tar.gz qemu
+        zip -r qemu.zip qemu
 
     - name: Create Release and Upload Asset
       env:
@@ -50,5 +50,5 @@ jobs:
         fi
         
         QEMU_VERSION=$(cd qemu && git rev-parse --short HEAD)
-        gh release upload v1.0.0 qemu.tar.gz --clobber
+        gh release upload v1.0.0 qemu.zip --clobber
         gh release edit v1.0.0 --notes "QEMU version: ${QEMU_VERSION}"
