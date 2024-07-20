@@ -1,10 +1,6 @@
 name: Build MicroPython for RP2040
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -37,27 +33,27 @@ jobs:
         git submodule update --init
 
     - name: Build MicroPython
-          run: |
-            cd micropython
-            make -C mpy-cross
-            cd ports/rp2
-            make submodules
-            make
-            echo "Listing directory structure:"
-            ls -R
+      run: |
+        cd micropython
+        make -C mpy-cross
+        cd ports/rp2
+        make submodules
+        make
+        echo "Listing directory structure:"
+        ls -R
 
     - name: Package MicroPython
-          run: |
-            mkdir -p micropython_rp2
-            cp micropython/ports/rp2/build*/firmware.* micropython_rp2/
-            zip -r micropython_rp2.zip micropython_rp2
-            
+      run: |
+        mkdir -p micropython_rp2
+        cp micropython/ports/rp2/build*/firmware.* micropython_rp2/
+        zip -r micropython_rp2.zip micropython_rp2
+        
     - name: Debug Build Output
-          run: |
-            echo "Contents of micropython/ports/rp2:"
-            ls -R micropython/ports/rp2
+      run: |
+        echo "Contents of micropython/ports/rp2:"
+        ls -R micropython/ports/rp2
 
-- name: Check MicroPython Version
+    - name: Check MicroPython Version
       run: |
         cd micropython
         git rev-parse HEAD
