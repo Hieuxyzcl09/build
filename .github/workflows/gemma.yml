@@ -1,9 +1,6 @@
 name: Build and Release Gemma
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
@@ -13,6 +10,14 @@ jobs:
       contents: write
     steps:
     - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install Hugging Face CLI
+      run: pip install huggingface_hub
 
     - name: Set up CMake
       uses: lukka/get-cmake@latest
@@ -26,21 +31,13 @@ jobs:
         cmake ..
         make
         
-    - name: Download tokenizer
-      uses: fdegir/huggingface-model-downloader@main
-      with:
-        model: 'google/gemma-7b'
-        filename: 'tokenizer.model'
-        local_dir: 'gemma.cpp/build/'
-        token: ${{ secrets.HF_TOKEN }}
-
-    - name: Download model
-      uses: fdegir/huggingface-model-downloader@main
-      with:
-        model: 'google/gemma-7b-it'
-        filename: 'gemma-7b-it-sfp.sbs'
-        local_dir: 'gemma.cpp/build/'
-        token: ${{ secrets.HF_TOKEN }}
+    - name: Download tokenizer and model
+      env:
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: |
+        huggingface-cli login --token $HF_TOKEN
+        huggingface-cli download google/gemma-7b tokenizer.model --local-dir gemma.cpp/build/
+        huggingface-cli download google/gemma-7b-it gemma-7b-it-sfp.sbs --local-dir gemma.cpp/build/
 
     - name: Create release package
       run: |
