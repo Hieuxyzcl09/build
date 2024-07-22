@@ -1,0 +1,57 @@
+name: Build and Release Gemma
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up CMake
+      uses: lukka/get-cmake@latest
+
+    - name: Build Gemma
+      run: |
+        git clone https://github.com/google/gemma.cpp.git
+        cd gemma.cpp
+        mkdir build && cd build
+        cmake ..
+        cmake --build . --config Release
+
+    - name: Download tokenizer and model
+      run: |
+        wget https://huggingface.co/google/gemma-7b/resolve/main/tokenizer.model -O gemma.cpp/build/tokenizer.spm
+        wget https://huggingface.co/google/gemma-7b-it/resolve/main/gemma-7b-it-sfp.sbs -O gemma.cpp/build/gemma-7b-it-sfp.sbs
+
+    - name: Create release package
+      run: |
+        mkdir release
+        cp gemma.cpp/build/gemma release/
+        cp gemma.cpp/build/tokenizer.spm release/
+        cp gemma.cpp/build/gemma-7b-it-sfp.sbs release/
+        zip -r gemma-release.zip release
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v1.0.1
+        release_name: Release v1.0.1
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./gemma-release.zip
+        asset_name: gemma-release.zip
+        asset_content_type: application/zip
