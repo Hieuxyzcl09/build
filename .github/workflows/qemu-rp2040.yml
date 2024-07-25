@@ -19,7 +19,7 @@ jobs:
         apt-get update
         apt-get install -y build-essential ninja-build libglib2.0-dev libpixman-1-dev libjpeg-dev git zip
         wget http://security.ubuntu.com/ubuntu/pool/main/libj/libjpeg-turbo/libjpeg-turbo8_2.0.3-0ubuntu1_amd64.deb
-        sudo dpkg -i libjpeg-turbo8_2.0.3-0ubuntu1_amd64.deb
+        dpkg -i libjpeg-turbo8_2.0.3-0ubuntu1_amd64.deb
 
     - name: Clone QEMU for RP2040
       run: |
