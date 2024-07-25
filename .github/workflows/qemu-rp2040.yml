@@ -1,0 +1,63 @@
+name: Build QEMU for RP2040
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: python:3.10
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install dependencies
+      run: |
+        apt-get update
+        apt-get install -y build-essential ninja-build libglib2.0-dev libpixman-1-dev libjpeg-dev git zip
+        wget http://security.ubuntu.com/ubuntu/pool/main/libj/libjpeg-turbo/libjpeg-turbo8_2.0.3-0ubuntu1_amd64.deb
+        sudo dpkg -i libjpeg-turbo8_2.0.3-0ubuntu1_amd64.deb
+
+    - name: Clone QEMU for RP2040
+      run: |
+        git clone https://github.com/raspberrypi/pico-qemu.git
+        cd pico-qemu
+        git submodule update --init
+
+    - name: Build QEMU for RP2040
+      run: |
+        cd pico-qemu
+        ./configure --target-list=arm-softmmu --enable-debug
+        make -j$(nproc)
+
+    - name: Package QEMU for RP2040
+      run: |
+        mkdir qemu-rp2040
+        cp pico-qemu/build/arm-softmmu/qemu-system-arm qemu-rp2040/
+        zip -r qemu-rp2040.zip qemu-rp2040
+
+    - name: Install GitHub CLI
+      run: |
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+        && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+        && apt update \
+        && apt install gh -y
+
+    - name: Create Release and Upload Asset
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        if ! gh release list | grep -q "v1.0.0"; then
+          echo "Creating new release v1.0.0"
+          gh release create v1.0.0 --title "Release v1.0.0" --notes "Initial release of QEMU for RP2040" --generate-notes
+        else
+          echo "Release v1.0.0 already exists"
+        fi
+        
+        QEMU_VERSION=$(cd pico-qemu && git rev-parse --short HEAD)
+        gh release upload v1.0.0 qemu-rp2040.zip --clobber
+        gh release edit v1.0.0 --notes "QEMU for RP2040 version: ${QEMU_VERSION}"
