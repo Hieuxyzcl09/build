@@ -10,9 +10,10 @@ jobs:
     
     steps:
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
-        go-version: '1.20'
+        go-version: '1.21'
+        check-latest: true
         
     - name: Install dependencies
       run: |
@@ -29,6 +30,7 @@ jobs:
         GOOS: linux
       run: |
         cd psiphon-tunnel-core/ConsoleClient
+        go mod tidy
         go build -v -o psiphon-tunnel-core-x86
         
     - name: Upload artifact
