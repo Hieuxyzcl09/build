@@ -1,0 +1,61 @@
+name: Build SafariPlus Tweak
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        repository: 'opa334/SafariPlus'
+        
+    - name: Install dependencies
+      run: |
+        brew install ldid xz
+        brew tap ProcursusTeam/procursus
+        brew install theos
+
+    - name: Setup Theos
+      run: |
+        git clone --recursive https://github.com/theos/theos.git $THEOS
+        curl -LO https://github.com/theos/sdks/archive/master.zip
+        TMP=$(mktemp -d)
+        unzip master.zip -d $TMP
+        mv $TMP/sdks-master/*.sdk $THEOS/sdks
+        rm -r master.zip $TMP
+      env:
+        THEOS: /opt/theos
+
+    - name: Install additional dependencies
+      run: |
+        git clone https://github.com/hbang/libcephei.git
+        cd libcephei
+        make package FINALPACKAGE=1
+        make install
+
+        git clone https://github.com/CreatureSurvive/libCSColorPicker.git
+        cd libCSColorPicker
+        make package FINALPACKAGE=1
+        make install
+
+        git clone https://github.com/rpetrich/RocketBootstrap.git
+        cd RocketBootstrap
+        make package FINALPACKAGE=1
+        make install
+
+    - name: Get WebKit headers
+      run: ./get_webkit.sh
+
+    - name: Build tweak
+      run: make package FINALPACKAGE=1 ROOTLESS=1
+      env:
+        THEOS: /opt/theos
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: SafariPlus-rootless
+        path: packages/*.deb
